@@ -7,6 +7,7 @@
       @click="addTrade"
       >添加</el-button
     >
+    <!-- 表格 -->
     <el-table :data="records" border style="margin: 20px 0">
       <el-table-column prop="id" label="序号" align="center" width="80">
       </el-table-column>
@@ -25,12 +26,23 @@
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" width="width">
-        <template>
-          <el-button type="primary" icon="el-icon-edit">修改</el-button>
-          <el-button type="success" icon="el-icon-delete">删除</el-button>
+        <template slot-scope="{ row }">
+          <el-button
+            type="primary"
+            icon="el-icon-edit"
+            @click="showUpdateDialog(row)"
+            >修改</el-button
+          >
+          <el-button
+            type="success"
+            @click="deleteTrademark(row)"
+            icon="el-icon-delete"
+            >删除</el-button
+          >
         </template>
       </el-table-column>
     </el-table>
+    <!-- 分页器 -->
     <el-pagination
       style="text-align: center"
       @size-change="sizeChange"
@@ -44,6 +56,7 @@
       :pager-count="5"
     >
     </el-pagination>
+    <!-- 添加修改弹出对话框 -->
     <el-dialog title="添加品牌" :visible.sync="dialogFormVisible">
       <el-form style="width: 80%" :model="tmForm">
         <el-form-item label="品牌名称" label-width="100px">
@@ -67,7 +80,7 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="dialogFormVisible = false"
+        <el-button type="primary" @click="addOrUpdateTrademark"
           >确 定</el-button
         >
       </div>
@@ -84,17 +97,17 @@ export default {
       limit: 3,
       trademarkList: [],
       dialogFormVisible: false,
-      tmForm:{
-        tmName:'',
-        logoUrl:''
-      }
+      tmForm: {
+        tmName: "",
+        logoUrl: "",
+      },
     };
   },
   mounted() {
     this.getTradeMarkList();
   },
   methods: {
-    async getTradeMarkList() {
+    async getTradeMarkList(page=1) {
       let res = await this.$API.trademark.getPageList(this.page, this.limit);
       if (res.code === 200) {
         this.trademarkList = res.data;
@@ -112,17 +125,62 @@ export default {
     },
     addTrade() {
       this.dialogFormVisible = true;
-      this.tmForm.tmName=''
-      this.tmForm.logoUrl=''
+      this.tmForm.tmName = "";
+      this.tmForm.logoUrl = "";
+    },
+    //添加或修改品牌
+    async addOrUpdateTrademark() {
+      let trademark = this.tmForm;
+      try {
+        await this.$API.trademark.addOrUpdateTrademark(trademark);
+        this.$message.success(trademark.id ? "修改成功" : "添加成功");
+        this.dialogFormVisible = false;
+        this.getTradeMarkList(trademark.id ? this.page : 1);
+      } catch (error) {
+        this.$message.error(trademark.id ? "修改失败" : "添加失败");
+      }
+    },
+    //点击修改
+    showUpdateDialog(row) {
+      this.dialogFormVisible = true;
+      this.tmForm = { ...row }; //浅拷贝
+    },
+    deleteTrademark(row) {
+      this.$confirm(`此操作将永久删除${row.tmName}, 是否继续?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(async () => {
+          try {
+            await this.$API.trademark.delete(row.id)
+            this.$message({
+              type: "success",
+              message: "删除成功!",
+            });
+            this.getTradeMarkList(this.records>1?this.page:this.page-1)
+          } catch (error) {
+          this.$message({
+            message: '删除品牌失败',
+            type: 'error'
+          });
+          }
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
     },
     //图片上传成功
     handleAvatarSuccess(res, file) {
-          this.tmForm.logoUrl=res.data
+      this.tmForm.logoUrl = res.data;
     },
     //图片上传前
     beforeAvatarUpload(file) {
       const isJPG = file.type === "image/jpeg";
-      const isLt2M = file.size / 1024 / 1024 < 2;
+      const isLt2M = file.size / 1024 / 1024 < 8;
 
       if (!isJPG) {
         this.$message.error("上传头像图片只能是 JPG 格式!");
@@ -143,8 +201,8 @@ export default {
 
 <style>
 .img {
-  width: 64px;
-  height: 64px;
+  width: 128px;
+  height: 128px;
 }
 .avatar-uploader .el-upload {
   border: 1px dashed #140606;

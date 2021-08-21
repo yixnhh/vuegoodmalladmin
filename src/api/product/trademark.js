@@ -12,9 +12,9 @@ export default {
     // 修改BaseTrademark
     addOrUpdateTrademark(trademark) {
         if (trademark.id) {
-            return request.put('/admin/product/baseTrademark/update')
+            return request.put('/admin/product/baseTrademark/update',trademark)
         }
-        return request.post('/admin/product/baseTrademark/save')
+        return request.post('/admin/product/baseTrademark/save',trademark)
     },
 
 
