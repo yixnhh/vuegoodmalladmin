@@ -9,7 +9,7 @@ export default {
 
     // DELETE /admin/product/deleteAttr/{attrId}
     // deleteAttr
-    deleteAttr(id){
+    deleteAttr(attrId){
         return request.delete(`/admin/product/deleteAttr/${attrId}`)
     },
 

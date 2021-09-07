@@ -3,7 +3,7 @@
   <div>
     <!-- 三级联动 -->
     <el-card shadow="always">
-      <CategorySelector @handlerCategory="handlerCategory" />
+      <CategorySelector @handlerCategory="handlerCategory" :isShowList=isShowList />
     </el-card>
     <el-card shadow="always" style="margin-top: 20px">
       <div v-show="isShowList">
@@ -40,12 +40,15 @@
                 size="mini"
                 @click="showUpdateDiv(row)"
               ></HintButton>
-              <HintButton
-                type="daner"
-                icon="el-icon-delete"
-                title="删除"
-                size="mini"
-              ></HintButton>
+              <el-popconfirm :title="`确定删除${row.attrName}吗？`" @onConfirm="deleteAttr(row)">
+                <HintButton
+                  slot="reference"
+                  type="danger"
+                  icon="el-icon-delete"
+                  title="删除属性"
+                  size="mini"
+                ></HintButton>
+              </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
@@ -60,6 +63,7 @@
           </el-form-item>
         </el-form>
         <el-button type="primary" icon="el-icon-plus" @click="addAttrValue"
+        :disabled="!attrForm.attrName"
           >添加属性值</el-button
         >
         <el-button @click="isShowList = true">取消</el-button>
@@ -93,16 +97,23 @@
             </template>
           </el-table-column>
           <el-table-column label="操作" align="center">
-            <template slot-scope="{ row }">
-              <HintButton
-                type="danger"
-                icon="el-icon-delete"
-                title="删除属性值"
-              ></HintButton>
+            <template slot-scope="{ row, $index }">
+              <el-popconfirm
+                :title="`确定删除${row.valueName}吗？`"
+                @onConfirm="attrForm.attrValueList.splice($index, 1)"
+              >
+                <HintButton
+                  slot="reference"
+                  type="danger"
+                  icon="el-icon-delete"
+                  title="删除属性值"
+                  size="mini"
+                ></HintButton>
+              </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
-        <el-button type="primary">保存</el-button>
+        <el-button type="primary" @click="save" :disabled="attrForm.attrValueList.length<1">保存</el-button>
         <el-button @click="isShowList = true">取消</el-button>
       </div>
     </el-card>
@@ -209,6 +220,47 @@ export default {
         this.$refs[index].focus();
       });
     },
+    //保存
+    async save() {
+      let attr = this.attrForm;
+      attr.attrValueList = attr.attrValueList.filter((item) => {
+        if (item.valueName !== "") {
+          delete item.isEdit;
+          return true;
+        }
+      });
+      if (attr.length === 0) {
+        this.$message({
+          message: "属性值列表必须有属性值才能保存",
+          type: "info",
+        });
+        return;
+      }
+      try {
+        await this.$API.attr.addOrUpdate(attr);
+        this.$message.success("保存成功");
+        this.isShowList = true;
+        this.getAttrList();
+      } catch (error) {
+        this.$message({
+          message: "保存属性失败",
+          type: "error",
+        });
+      }
+    },
+    //删除属性
+    async deleteAttr(row){
+      try {
+        await this.$API.attr.deleteAttr(row.id)
+        this.$message.success('删除成功')
+        this.getAttrList()
+      } catch (error) {
+        this.$message({
+          message: '删除失败',
+          type: 'error'
+        });
+      }
+    }
   },
 };
 </script>
